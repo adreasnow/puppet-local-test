@@ -1,0 +1,53 @@
+services:
+  puppet-master:
+    build:
+      context: puppet-master
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    hostname: puppet
+    ports:
+      - "8140:8140"
+    environment:
+      - PUPPETDB_SERVER_URLS=""
+    volumes:
+      - ./puppet-master/keys:/etc/puppetlabs/puppet/keys
+      - ./puppet-master/code:/etc/puppetlabs/code
+      - ./puppet-master/ssl:/etc/puppetlabs/puppet/ssl
+      - puppet-serverdata:/opt/puppetlabs/server/data/puppetserver
+    networks:
+      - puppet
+    develop:
+      watch:
+        - path: ./puppet-master/Dockerfile
+          action: rebuild
+        - action: sync+restart
+          path: ./puppet-master/puppet.conf
+          target: /etc/puppetlabs/puppet/puppet.conf
+          initial_sync: true
+  client:
+    build:
+      context: client
+      dockerfile: Dockerfile
+    platform: linux/amd64
+    hostname: client
+    depends_on:
+      - puppet-master
+    volumes:
+      - ./puppet-master/ssl:/etc/puppetlabs/puppet/ssl
+    networks:
+      - puppet
+    develop:
+      watch:
+        - path: ./client/Dockerfile
+          action: rebuild
+        - action: sync+restart
+          path: ./client/puppet.conf
+          target: /etc/puppetlabs/puppet/puppet.conf
+          initial_sync: true
+
+networks:
+  puppet:
+    driver: bridge
+
+volumes:
+  puppet-serverdata:
