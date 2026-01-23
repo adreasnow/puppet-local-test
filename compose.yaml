@@ -8,11 +8,10 @@ services:
     ports:
       - "8140:8140"
     environment:
-      - PUPPETDB_SERVER_URLS=""
+      - PUPPET_MASTERPORT=8140
     volumes:
       - ./puppet-master/keys:/etc/puppetlabs/puppet/keys
-      - ./puppet-master/code:/etc/puppetlabs/code
-      - ./puppet-master/ssl:/etc/puppetlabs/puppet/ssl
+      - ./puppet-master/code:/etc/puppetlabs/code/environments/production
       - puppet-serverdata:/opt/puppetlabs/server/data/puppetserver
     networks:
       - puppet

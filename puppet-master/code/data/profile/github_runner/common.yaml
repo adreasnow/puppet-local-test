@@ -1,15 +1,12 @@
-github_runner::extra_user_groups: [ 'github-runner' ]
 profile::github_runner::user: github-runner
 profile::github_runner::user_uid: 1001
 profile::github_runner::user_gid: 1001
 profile::github_runner::repo: https://github.com/adreasnow/gha-playground
-
+profile::github_runner::runner_version: 2.331.0
+profile::github_runner::src_path: /srv/src/github-runner
 profile::github_runner::required_pkgs:
   - libsasl2-dev
   - libcurl4
   - libcurl4-gnutls-dev
   - libicu-dev
   - jq
-
-profile::github_runner::runner_version: 2.331.0
-profile::github_runner::src_path: /srv/src/github-runner

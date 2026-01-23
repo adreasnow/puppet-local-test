@@ -1,12 +1,13 @@
-class profile::github_runner {
-  $src_path = lookup('profile::github_runner::src_path')
-  $runner_version = lookup('profile::github_runner::runner_version')
-  $user = lookup('profile::github_runner::user')
-  $uid = lookup('profile::github_runner::user_uid')
-  $gid = lookup('profile::github_runner::user_gid')
-  $repo = lookup('profile::github_runner::repo')
-  $register_token = lookup('profile::github_runner::register_token')
-  $required_pkgs = lookup('profile::github_runner::required_pkgs')
+class profile::github_runner (
+  String $src_path,
+  String $runner_version,
+  String $user,
+  Integer $user_uid,
+  Integer $user_gid,
+  String $repo,
+  String $register_token,
+  Array[String] $required_pkgs,
+) {
 
   file { $src_path:
     ensure  => 'directory',
@@ -18,15 +19,15 @@ class profile::github_runner {
 
   group { $user:
     ensure => present,
-    gid    => $gid,
+    gid    => $user_gid,
     system => true,
   }
 
 
   user { $user:
     ensure     => present,
-    uid        => $uid,
-    gid        => $gid,
+    uid        => $user_uid,
+    gid        => $user_gid,
     shell      => '/bin/bash',
     home       => "/home/${user}",
     managehome => true,
