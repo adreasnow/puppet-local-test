@@ -10,7 +10,9 @@ class profile::github_runner (
 ) {
 
   file { $src_path:
+    path => $src_path,
     ensure  => 'directory',
+    recurse => true,
     owner   => $user,
     group   => $user,
     mode    => '0755',

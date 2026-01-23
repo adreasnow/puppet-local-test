@@ -9,10 +9,12 @@ services:
       - "8140:8140"
     environment:
       - PUPPET_MASTERPORT=8140
+      - USE_PUPPETDB=false
+      - PUPPETDB_SERVER_URLS=
+      - PUPPET_STORECONFIGS=false
     volumes:
       - ./puppet-master/keys:/etc/puppetlabs/puppet/keys
       - ./puppet-master/code:/etc/puppetlabs/code/environments/production
-      - puppet-serverdata:/opt/puppetlabs/server/data/puppetserver
     networks:
       - puppet
     develop:
@@ -31,8 +33,6 @@ services:
     hostname: client
     depends_on:
       - puppet-master
-    volumes:
-      - ./puppet-master/ssl:/etc/puppetlabs/puppet/ssl
     networks:
       - puppet
     develop:
@@ -47,6 +47,3 @@ services:
 networks:
   puppet:
     driver: bridge
-
-volumes:
-  puppet-serverdata:
