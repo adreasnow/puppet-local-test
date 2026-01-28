@@ -1,8 +1,18 @@
-FROM puppet/puppet-agent-ubuntu:latest
+FROM antmelekhin/docker-systemd:ubuntu-22.04
+
+RUN apt update && \
+    apt purge -y puppet-agent && \
+    apt install -y gnupg wget
+
+RUN wget https://apt.puppetlabs.com/puppet8-release-bionic.deb && \
+    dpkg -i puppet8-release-bionic.deb && \
+    rm puppet8-release-bionic.deb
+
+RUN apt update && \
+    apt install -y puppet-agent
 
 COPY puppet.conf /etc/puppetlabs/puppet/puppet.conf
 
-# Wait for puppet server to be ready, then run puppet agent periodically
-ENTRYPOINT ["/bin/bash", "-c"]
-CMD ["echo 'Waiting for puppet server...'; sleep 20; while true; do puppet agent -t --debug || true; sleep 30; done"]
-# CMD ["while true; do sleep 30; done"]
+ENV PATH="/opt/puppetlabs/puppet/bin:${PATH}"
+
+# ENTRYPOINT comes from parent image

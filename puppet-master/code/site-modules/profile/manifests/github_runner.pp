@@ -1,22 +1,38 @@
 class profile::github_runner (
+  String $app_path,
   String $src_path,
   String $runner_version,
   String $user,
   Integer $user_uid,
   Integer $user_gid,
-  String $repo,
-  String $register_token,
+  String $repository,
+  String $github_token,
   Array[String] $required_pkgs,
 ) {
+  $service_name = "actions.runner.${regsubst($repository, '/', '-', 'G')}.${facts['networking']['hostname']}.service"
 
   file { $src_path:
-    path => $src_path,
     ensure  => 'directory',
-    recurse => true,
+    path    => $src_path,
     owner   => $user,
     group   => $user,
     mode    => '0755',
-    require => User[$user],
+    require => [
+      User[$user],
+      File['/srv/src'],
+    ],
+  }
+
+  file { $app_path:
+    ensure  => 'directory',
+    path    => $app_path,
+    owner   => $user,
+    group   => $user,
+    mode    => '0755',
+    require => [
+      User[$user],
+      File['/srv/app'],
+    ],
   }
 
   group { $user:
@@ -24,7 +40,6 @@ class profile::github_runner (
     gid    => $user_gid,
     system => true,
   }
-
 
   user { $user:
     ensure     => present,
@@ -48,71 +63,52 @@ class profile::github_runner (
   }
 
   exec { "extract_runner_${runner_version}":
-    command => "tar -xzf ${src_path}/actions-runner-linux-x64-${runner_version}.tar.gz -C ${src_path}",
+    command => "tar -xzf ${src_path}/actions-runner-linux-x64-${runner_version}.tar.gz -C ${app_path}",
     user    => $user,
     group   => $user,
     path    => ['/usr/bin', '/bin'],
     creates => "${src_path}/config.sh",
-    require => File["${src_path}/actions-runner-linux-x64-${runner_version}.tar.gz"],
+    require => [
+      File["${src_path}/actions-runner-linux-x64-${runner_version}.tar.gz"],
+      File[$app_path]
+    ],
     notify  => Exec['register_runner'],
   }
 
   package { $required_pkgs:
     ensure => installed,
+    # require => Exec['apt_update'],
   }
 
   exec { 'register_runner':
-    command     => inline_template('./config.sh --unattended --url <%= @repo %> --token <%= @register_token %>' ),
-    cwd         => $src_path,
+    command     => "CONFIG_TOKEN=\$(curl -sX POST -H \"Accept: application/vnd.github+json\" -H \"Authorization: Bearer ${github_token}\" -H \"X-GitHub-Api-Version: 2022-11-28\" https://api.github.com/repos/${repository}/actions/runners/registration-token | jq -r \'.token\') && ./config.sh --unattended --url https://github.com/${repository} --token \$CONFIG_TOKEN",
+    cwd         => $app_path,
     user        => $user,
     provider    => 'shell',
     refreshonly => true,
+    notify      => Exec['svc_install'],
     require     => [
       Exec["extract_runner_${runner_version}"],
       User[$user],
-      Package[$required_pkgs],
     ],
-    notify      => Service['actions.runner.service'],
   }
 
-  file { '/etc/systemd/system/actions.runner.service':
-    ensure  => 'file',
-    owner   => 'root',
-    group   => 'root',
-    mode    => '0644',
-    content => "[Unit]
-Description=GitHub Actions Runner
-After=network.target
-
-[Service]
-ExecStart=${src_path}/runsvc.sh
-User=${user}
-WorkingDirectory=${src_path}
-KillMode=process
-KillSignal=SIGTERM
-TimeoutStopSec=5min
-
-[Install]
-WantedBy=multi-user.target
-",
-    notify  => Exec['systemd-daemon-reload'],
-    require => Exec['register_runner'],
-  }
-
-  service { 'actions.runner.service':
-    ensure  => 'running',
-    enable  => true,
-    require => [
-      File['/etc/systemd/system/actions.runner.service'],
-      Exec['register_runner'],
-      Exec['systemd-daemon-reload'],
+  exec { 'svc_install':
+    command     => "${app_path}/svc.sh install",
+    cwd         => $app_path,
+    refreshonly => true,
+    notify      => Service[$service_name],
+    require     => [
+      Exec["extract_runner_${runner_version}"],
       User[$user],
     ],
   }
 
-  exec { 'systemd-daemon-reload':
-    command     => '/bin/systemctl daemon-reload',
-    refreshonly => true,
-    path        => ['/bin', '/usr/bin'],
+  service { $service_name:
+    ensure  => 'running',
+    enable  => true,
+    require => [
+      Exec['svc_install'],
+    ],
   }
 }

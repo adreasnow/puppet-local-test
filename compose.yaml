@@ -35,6 +35,10 @@ services:
       - puppet-master
     networks:
       - puppet
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup
+    privileged: true
+    cgroup: host
     develop:
       watch:
         - path: ./client/Dockerfile
